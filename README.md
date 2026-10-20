@@ -35,23 +35,22 @@ is brightness that wobbles from frame to frame. FlickerScope:
 
 ## Install
 
-```sh
-npm install flickerscope
-```
-
-```js
-import { measure, watch } from 'flickerscope';
-```
-
-Or with a script tag, which defines a global `FlickerScope`:
+With a script tag, which defines a global `FlickerScope` (served by jsDelivr from this repository):
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/flickerscope@1/dist/flickerscope.min.js"></script>
-<!-- or -->
-<script src="https://unpkg.com/flickerscope@1/dist/flickerscope.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/verysilentco/flickerscope@1/dist/flickerscope.min.js"></script>
 ```
 
-The package ships `dist/flickerscope.mjs` (ES module), `dist/flickerscope.cjs` (CommonJS),
+As an ES module:
+
+```js
+import { measure, watch } from 'https://cdn.jsdelivr.net/gh/verysilentco/flickerscope@1/dist/flickerscope.mjs';
+```
+
+Or download `dist/` from the [latest release](https://github.com/verysilentco/flickerscope/releases/latest)
+and host it yourself.
+
+The release ships `dist/flickerscope.mjs` (ES module), `dist/flickerscope.cjs` (CommonJS),
 `dist/flickerscope.min.js` (script tag) and TypeScript declarations.
 
 ## Examples
@@ -319,7 +318,7 @@ To measure the largest video on any page, make a bookmark with this as its addre
 the "Measure flicker" link from the demo page to your bookmarks bar):
 
 ```
-javascript:(function(){function go(){var v=[].slice.call(document.querySelectorAll('video')).sort(function(a,b){var p=a.getBoundingClientRect(),q=b.getBoundingClientRect();return q.width*q.height-p.width*p.height})[0];if(!v){alert('No video found on this page.');return}FlickerScope.measure(v,{seconds:4}).then(function(r){alert('Flicker: '+r.percent+' % ('+r.label+')'+(r.hz?', rhythm '+r.hz+' Hz':'')+'\nTo remove it on iPhone: deflickerapp.com')},function(e){alert(e.message)})}if(window.FlickerScope)return go();var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/flickerscope@1/dist/flickerscope.min.js';s.onload=go;s.onerror=function(){alert('This page does not allow outside scripts, so FlickerScope cannot run here.')};document.head.appendChild(s)})();
+javascript:(function(){function go(){var v=[].slice.call(document.querySelectorAll('video')).sort(function(a,b){var p=a.getBoundingClientRect(),q=b.getBoundingClientRect();return q.width*q.height-p.width*p.height})[0];if(!v){alert('No video found on this page.');return}FlickerScope.measure(v,{seconds:4}).then(function(r){alert('Flicker: '+r.percent+' % ('+r.label+')'+(r.hz?', rhythm '+r.hz+' Hz':'')+'\nTo remove it on iPhone: deflickerapp.com')},function(e){alert(e.message)})}if(window.FlickerScope)return go();var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/verysilentco/flickerscope@1/dist/flickerscope.min.js';s.onload=go;s.onerror=function(){alert('This page does not allow outside scripts, so FlickerScope cannot run here.')};document.head.appendChild(s)})();
 ```
 
 It loads the script from jsDelivr, plays the video muted for 4 seconds, puts it back, and shows

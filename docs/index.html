@@ -196,7 +196,7 @@
   <p>Under 2 % reads as none, under 5 % as slight, under 12 % as visible, and above that as strong. Compression and fast motion can add a percent or two.</p>
 </main>
 <footer>
-  <p>FlickerScope is free and open source (MIT): <a href="https://github.com/verysilentco/flickerscope">source on GitHub</a>, <a href="https://www.npmjs.com/package/flickerscope">npm package</a>.</p>
+  <p>FlickerScope is free and open source (MIT): <a href="https://github.com/verysilentco/flickerscope">source on GitHub</a>, <a href="https://www.jsdelivr.com/package/gh/verysilentco/flickerscope">on jsDelivr</a>.</p>
   <p>Made by Silent Co, LLC, the makers of <a href="https://deflickerapp.com">Deflicker</a>. Contact: <a href="mailto:contact@silent.co">contact@silent.co</a></p>
 </footer>
 
@@ -481,7 +481,7 @@
   });
 
   // bookmarklet: loads the script from jsDelivr and measures the largest video on the page
-  var bm = "javascript:(function(){function go(){var v=[].slice.call(document.querySelectorAll('video')).sort(function(a,b){var p=a.getBoundingClientRect(),q=b.getBoundingClientRect();return q.width*q.height-p.width*p.height})[0];if(!v){alert('No video found on this page.');return}FlickerScope.measure(v,{seconds:4}).then(function(r){alert('Flicker: '+r.percent+' % ('+r.label+')'+(r.hz?', rhythm '+r.hz+' Hz':'')+'\\nTo remove it on iPhone: deflickerapp.com')},function(e){alert(e.message)})}if(window.FlickerScope)return go();var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/flickerscope@1/dist/flickerscope.min.js';s.onload=go;s.onerror=function(){alert('This page does not allow outside scripts, so FlickerScope cannot run here.')};document.head.appendChild(s)})();";
+  var bm = "javascript:(function(){function go(){var v=[].slice.call(document.querySelectorAll('video')).sort(function(a,b){var p=a.getBoundingClientRect(),q=b.getBoundingClientRect();return q.width*q.height-p.width*p.height})[0];if(!v){alert('No video found on this page.');return}FlickerScope.measure(v,{seconds:4}).then(function(r){alert('Flicker: '+r.percent+' % ('+r.label+')'+(r.hz?', rhythm '+r.hz+' Hz':'')+'\\nTo remove it on iPhone: deflickerapp.com')},function(e){alert(e.message)})}if(window.FlickerScope)return go();var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/verysilentco/flickerscope@1/dist/flickerscope.min.js';s.onload=go;s.onerror=function(){alert('This page does not allow outside scripts, so FlickerScope cannot run here.')};document.head.appendChild(s)})();";
   var link = $('bookmarklet');
   link.href = bm;
   link.addEventListener('click', function (e) {
