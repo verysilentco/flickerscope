@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlickerScope: measure video flicker</title>
+<meta name="description" content="Measure how much a video flickers from LED and fluorescent lights, in your browser. Nothing is uploaded.">
+<meta name="color-scheme" content="light">
+<style>
+  :root {
+    --cream: #FAF7F2;
+    --ink: #1C1A21;
+    --muted: #5A5560;
+    --line: #D9D2C7;
+    --grid: #E9E3D9;
+    --panel: #FFFDF9;
+    --accent: #F0A23A;
+    --error: #8A2A12;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--cream); }
+  body {
+    margin: 0;
+    background: var(--cream);
+    color: var(--ink);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  main, footer { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+  h1 { font-size: 1.9rem; line-height: 1.2; margin: 40px 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 1.1rem; margin: 32px 0 8px; }
+  p { margin: 0 0 12px; }
+  .lede { color: var(--muted); font-size: 1.05rem; max-width: 60ch; }
+  a { color: var(--ink); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  .drop {
+    display: block; margin-top: 24px; padding: 28px 20px;
+    border: 1.5px dashed var(--muted); border-radius: 10px; background: var(--panel);
+    text-align: center; cursor: pointer;
+  }
+  .drop:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .drop.over { border-style: solid; border-color: var(--ink); }
+  .drop strong { display: block; font-size: 1.05rem; }
+  .drop span { color: var(--muted); font-size: 0.95rem; }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+
+  form.url { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-top: 16px; }
+  form.url .field { flex: 1 1 280px; }
+  label.small { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 4px; }
+  input[type=url], select {
+    width: 100%; font: inherit; color: var(--ink); background: var(--panel);
+    border: 1px solid var(--muted); border-radius: 8px; padding: 8px 10px; min-height: 44px;
+  }
+  select { width: auto; }
+  button {
+    font: inherit; font-weight: 600; color: var(--cream); background: var(--ink);
+    border: 1px solid var(--ink); border-radius: 8px; padding: 8px 16px; min-height: 44px; cursor: pointer;
+  }
+  button.quiet { color: var(--ink); background: transparent; }
+  button:disabled { opacity: 0.55; cursor: progress; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin-top: 16px; }
+
+  #status { min-height: 1.6em; margin-top: 16px; color: var(--muted); }
+  progress { width: 100%; height: 6px; accent-color: var(--ink); }
+  .error {
+    margin-top: 16px; padding: 12px 14px; border: 1px solid var(--error); border-radius: 8px;
+    color: var(--error); background: var(--panel);
+  }
+
+  .result { margin-top: 28px; padding: 24px 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+  .hero { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+  .hero .num { font-size: clamp(3rem, 12vw, 4.5rem); font-weight: 700; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .hero .what { font-size: 1.25rem; font-weight: 600; }
+  .meter { position: relative; height: 14px; margin: 18px 0 6px; border: 1px solid var(--ink); border-radius: 7px; background: var(--cream); overflow: hidden; }
+  .meter .fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
+  .meter .tick { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--ink); opacity: 0.35; }
+  .scale { position: relative; height: 1.3em; font-size: 0.8rem; color: var(--muted); }
+  .scale span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .scale span:first-child { transform: none; }
+
+  dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 20px 0 0; }
+  dl.facts dt { color: var(--muted); }
+  dl.facts dd { margin: 0; }
+
+  .chart-wrap { position: relative; margin-top: 8px; }
+  .chart-wrap svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart-wrap svg:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+  .tip {
+    position: absolute; top: 0; pointer-events: none; padding: 6px 8px; font-size: 0.85rem;
+    background: var(--ink); color: var(--cream); border-radius: 6px; white-space: nowrap; transform: translateX(-50%);
+  }
+  .tip b { font-variant-numeric: tabular-nums; }
+  .key { display: flex; gap: 16px; font-size: 0.85rem; color: var(--muted); margin-top: 6px; }
+  .key i { display: inline-block; width: 18px; height: 0; vertical-align: middle; margin-right: 6px; border-top: 2px solid var(--ink); }
+  .key i.dash { border-top: 2px dashed var(--muted); }
+
+  .regions { display: grid; gap: 2px; margin-top: 8px; max-width: 360px; border: 1px solid var(--line); background: var(--line); }
+  .regions div { display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-variant-numeric: tabular-nums; background: var(--cream); color: var(--ink); }
+  .regions div.off { color: var(--muted); background: var(--grid); }
+  .note { font-size: 0.9rem; color: var(--muted); }
+
+  details { margin-top: 16px; }
+  summary { cursor: pointer; }
+  .table-scroll { max-height: 260px; overflow: auto; margin-top: 8px; border: 1px solid var(--line); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 3px 10px; border-bottom: 1px solid var(--grid); }
+  th { position: sticky; top: 0; background: var(--panel); }
+
+  .cta { margin: 20px 0 0; padding-top: 16px; border-top: 1px solid var(--line); }
+  code { font-size: 0.9em; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  .bm { display: inline-block; padding: 6px 12px; border: 1px solid var(--ink); border-radius: 8px; text-decoration: none; font-weight: 600; }
+  footer { margin-top: 48px; padding-bottom: 40px; color: var(--muted); font-size: 0.9rem; }
+  footer p { margin-bottom: 6px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>How much does your video flicker?</h1>
+  <p class="lede">Drop in a clip filmed under LED or fluorescent light and get a flicker percentage.
+    The video stays on your device: this page reads small 256 px copies of its frames and uploads nothing.</p>
+
+  <label class="drop" id="drop">
+    <input class="sr-only" type="file" id="file" accept="video/*">
+    <strong>Drop a video here, or choose a file</strong>
+    <span>MP4, MOV or WebM. The first 6 seconds are measured.</span>
+  </label>
+
+  <form class="url" id="urlForm">
+    <div class="field">
+      <label class="small" for="url">Or paste a video URL (the website must allow cross-origin reading)</label>
+      <input type="url" id="url" placeholder="https://example.com/clip.mp4" inputmode="url" autocomplete="off">
+    </div>
+    <button type="submit">Measure</button>
+  </form>
+
+  <div class="row">
+    <div>
+      <label class="small" for="seconds">Seconds to measure</label>
+      <select id="seconds">
+        <option value="3">3</option>
+        <option value="6" selected>6</option>
+        <option value="10">10</option>
+        <option value="20">20</option>
+      </select>
+    </div>
+    <button type="button" class="quiet" id="sample">Try a sample clip</button>
+  </div>
+
+  <div id="status" role="status" aria-live="polite"></div>
+  <progress id="progress" max="1" value="0" hidden></progress>
+  <div class="error" id="error" role="alert" hidden></div>
+
+  <section class="result" id="result" hidden aria-labelledby="resultTitle">
+    <h2 class="sr-only" id="resultTitle">Result</h2>
+    <div class="hero">
+      <span class="num" id="pct"></span>
+      <span class="what" id="label"></span>
+    </div>
+    <div class="meter" role="img" id="meter">
+      <div class="fill" id="fill"></div>
+    </div>
+    <div class="scale" id="scale" aria-hidden="true"></div>
+
+    <dl class="facts" id="facts"></dl>
+
+    <h2 id="chartTitle">Brightness over time</h2>
+    <p class="note">Whole-frame brightness in linear light, as a percentage of its average. The dashed line is the 0.3 s moving average that separates real scene changes from flicker.</p>
+    <div class="chart-wrap" id="chartWrap">
+      <svg id="chart" viewBox="0 0 640 220" role="img" aria-labelledby="chartTitle" tabindex="0"></svg>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <div class="key" aria-hidden="true"><span><i></i>Brightness</span><span><i class="dash"></i>Moving average</span></div>
+    <details>
+      <summary>Show the numbers</summary>
+      <div class="table-scroll"><table id="table"></table></div>
+    </details>
+
+    <h2>Flicker by region</h2>
+    <p class="note">Each cell's own percentage. Gray cells marked n/a were too dark or blown out to measure.</p>
+    <div class="regions" id="regions"></div>
+
+    <p class="cta" id="cta"></p>
+  </section>
+
+  <h2>Measure a video on any page</h2>
+  <p>Drag this link to your bookmarks bar, then click it on a page with a video:
+    <a class="bm" id="bookmarklet" href="#">Measure flicker</a></p>
+  <p class="note">It measures the largest video on the page for 4 seconds. Many sites (YouTube, Netflix and other streaming services) do not let scripts read their video pixels, so it will tell you it cannot measure there. Downloaded clips and your own files always work.</p>
+
+  <h2>What the number means</h2>
+  <p>FlickerScope tracks the brightness of the whole frame and of 16 regions over time, removes slow changes with a 0.3 s moving average, and reports the IEEE 1789 Percent Flicker of what is left: 100 &times; (high &minus; low) / (high + low), using the 95th and 5th percentiles. The headline is the largest of the whole-frame value, the value most of the picture shares, and half of the strongest steady single-region value. Hard cuts and single flashes are left out.</p>
+  <p>Under 2 % reads as none, under 5 % as slight, under 12 % as visible, and above that as strong. Compression and fast motion can add a percent or two.</p>
+</main>
+<footer>
+  <p>FlickerScope is free and open source (MIT): <a href="https://github.com/verysilentco/flickerscope">source on GitHub</a>, <a href="https://www.npmjs.com/package/flickerscope">npm package</a>.</p>
+  <p>Made by Silent Co, LLC, the makers of <a href="https://deflickerapp.com">Deflicker</a>. Contact: <a href="mailto:contact@silent.co">contact@silent.co</a></p>
+</footer>
+
+<script src="flickerscope.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var busy = false;
+  var NAMES = { none: 'No visible flicker', slight: 'Slight flicker', visible: 'Visible flicker', strong: 'Strong flicker' };
+  var WARN = {
+    FEW_FRAMES: 'Very few frames were read, so this reading is rough.',
+    TOO_DARK: 'The picture is too dark to measure reliably.',
+    CLIPPED: 'The picture is blown out (clipped white), so there is little to measure.',
+    LOW_USABLE_AREA: 'Most of the picture is too dark or blown out; only the rest was measured.',
+    LOW_FRAME_RATE: 'Frames arrived slowly, so fast flicker may be missed.'
+  };
+  var SCALE_MAX = 30; // meter runs 0..30 %
+
+  function setStatus(text) { $('status').textContent = text; }
+  function showError(msg) { var e = $('error'); e.textContent = msg; e.hidden = !msg; }
+
+  async function run(input, name) {
+    if (busy) return;
+    busy = true;
+    showError('');
+    $('result').hidden = true;
+    var buttons = document.querySelectorAll('button');
+    buttons.forEach(function (b) { b.disabled = true; });
+    var bar = $('progress');
+    bar.hidden = false; bar.value = 0;
+    setStatus('Reading frames from ' + name + '...');
+    try {
+      var r = await FlickerScope.measure(input, {
+        seconds: Number($('seconds').value),
+        onProgress: function (p) { bar.value = p; }
+      });
+      render(r);
+      setStatus('Measured ' + name + '.');
+    } catch (err) {
+      setStatus('');
+      showError(err && err.message ? err.message : String(err));
+    } finally {
+      bar.hidden = true;
+      buttons.forEach(function (b) { b.disabled = false; });
+      busy = false;
+    }
+  }
+
+  function fmt(v, d) { return v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+
+  function render(r) {
+    $('pct').textContent = fmt(r.percent, 1) + ' %';
+    $('label').textContent = NAMES[r.label];
+    var meter = $('meter');
+    meter.setAttribute('aria-label', 'Flicker ' + fmt(r.percent, 1) + ' percent, ' + NAMES[r.label].toLowerCase() + ', on a scale to ' + SCALE_MAX + ' percent');
+    $('fill').style.width = Math.min(100, (r.percent / SCALE_MAX) * 100) + '%';
+    meter.querySelectorAll('.tick').forEach(function (t) { t.remove(); });
+    var scale = $('scale');
+    scale.textContent = '';
+    [[0, '0'], [2, 'slight'], [5, 'visible'], [12, 'strong'], [SCALE_MAX, SCALE_MAX + ' %']].forEach(function (s, i) {
+      var pos = (s[0] / SCALE_MAX) * 100;
+      if (i > 0 && i < 4) {
+        var tick = document.createElement('div');
+        tick.className = 'tick'; tick.style.left = pos + '%';
+        meter.appendChild(tick);
+      }
+      var lab = document.createElement('span');
+      lab.textContent = s[1];
+      lab.style.left = pos + '%';
+      if (i === 4) { lab.style.left = 'auto'; lab.style.right = '0'; lab.style.transform = 'none'; }
+      scale.appendChild(lab);
+    });
+
+    var facts = [
+      ['Rhythm', r.hz ? fmt(r.hz, 1) + ' Hz as recorded (the light itself pulses faster; the frame rate folds it down to this)' : 'No single clear rhythm'],
+      ['Flicker Index', fmt(r.flickerIndex, 3)],
+      ['Measured', r.frames + ' frames, ' + fmt(r.seconds, 1) + ' s at ' + fmt(r.fps, 0) + ' fps'],
+      ['Usable picture', Math.round(r.usableArea * 100) + ' % (very dark and blown-out areas are skipped)']
+    ];
+    r.warnings.forEach(function (w) { if (WARN[w]) facts.push(['Note', WARN[w]]); });
+    var dl = $('facts');
+    dl.textContent = '';
+    facts.forEach(function (f) {
+      var dt = document.createElement('dt'); dt.textContent = f[0];
+      var dd = document.createElement('dd'); dd.textContent = f[1];
+      dl.appendChild(dt); dl.appendChild(dd);
+    });
+
+    drawChart(r.series);
+    drawRegions(r);
+
+    var cta = $('cta');
+    cta.textContent = '';
+    cta.appendChild(document.createTextNode(r.label === 'none'
+      ? 'Nothing to fix in this clip. When a clip does flicker, '
+      : 'To remove this flicker from the clip on iPhone, use '));
+    var a = document.createElement('a');
+    a.href = 'https://deflickerapp.com';
+    a.textContent = r.label === 'none' ? 'Deflicker removes it on iPhone' : 'Deflicker';
+    cta.appendChild(a);
+    cta.appendChild(document.createTextNode('.'));
+
+    $('result').hidden = false;
+  }
+
+  function drawRegions(r) {
+    var box = $('regions');
+    var grid = Math.round(Math.sqrt(r.regions.length));
+    box.textContent = '';
+    box.style.gridTemplateColumns = 'repeat(' + grid + ', 1fr)';
+    var aspect = window.__fsAspect || 16 / 9;
+    box.style.aspectRatio = String(aspect);
+    r.regions.forEach(function (g, i) {
+      var c = document.createElement('div');
+      if (!g.usable) {
+        c.className = 'off';
+        c.textContent = 'n/a';
+        c.title = 'Too dark or blown out';
+      } else {
+        c.textContent = fmt(g.percent, 1);
+        var a = Math.min(1, g.percent / 20);
+        // orange tint for the flicker reading; ink text stays readable at every step
+        c.style.background = 'rgba(240, 162, 58, ' + (0.08 + 0.8 * a).toFixed(2) + ')';
+        if (r.local.region === i && r.local.percent >= r.percent) c.style.fontWeight = '700';
+      }
+      c.setAttribute('aria-label', 'Row ' + (g.row + 1) + ', column ' + (g.col + 1) + ': ' + (g.usable ? fmt(g.percent, 1) + ' percent' : 'not measured'));
+      box.appendChild(c);
+    });
+  }
+
+  // ------------------------------------------------------------- chart
+  var chartState = null;
+  function drawChart(s) {
+    var svg = $('chart');
+    var W = 640, H = 220, L = 44, R = 8, T = 10, B = 28;
+    var n = s.t.length;
+    var mean = s.brightness.reduce(function (a, b) { return a + b; }, 0) / n;
+    var y = s.brightness.map(function (v) { return (v / mean) * 100; });
+    var tr = s.trend.map(function (v) { return (v / mean) * 100; });
+    var lo = Math.min.apply(null, y.concat(tr)), hi = Math.max.apply(null, y.concat(tr));
+    var span = Math.max(hi - lo, 4);
+    var step = span > 40 ? 20 : span > 16 ? 10 : span > 8 ? 4 : 2;
+    lo = Math.floor((lo - span * 0.05) / step) * step;
+    hi = Math.ceil((hi + span * 0.05) / step) * step;
+    var t1 = s.t[n - 1] || 1;
+    var X = function (t) { return L + (t / t1) * (W - L - R); };
+    var Y = function (v) { return T + (1 - (v - lo) / (hi - lo)) * (H - T - B); };
+    var NS = 'http://www.w3.org/2000/svg';
+    svg.textContent = '';
+    function el(tag, attrs, text) {
+      var e = document.createElementNS(NS, tag);
+      for (var k in attrs) e.setAttribute(k, attrs[k]);
+      if (text != null) e.textContent = text;
+      svg.appendChild(e);
+      return e;
+    }
+    for (var v = lo; v <= hi + 1e-9; v += step) {
+      el('line', { x1: L, x2: W - R, y1: Y(v), y2: Y(v), stroke: '#E9E3D9', 'stroke-width': 1 });
+      el('text', { x: L - 6, y: Y(v) + 4, 'text-anchor': 'end', 'font-size': 11, fill: '#5A5560' }, v + '%');
+    }
+    var tStep = t1 > 12 ? 2 : t1 > 5 ? 1 : 0.5;
+    for (var t = 0; t <= t1 + 1e-9; t += tStep) {
+      el('text', { x: X(t), y: H - 8, 'text-anchor': 'middle', 'font-size': 11, fill: '#5A5560' }, (Math.round(t * 10) / 10) + ' s');
+    }
+    el('line', { x1: L, x2: W - R, y1: H - B, y2: H - B, stroke: '#5A5560', 'stroke-width': 1 });
+    var path = function (arr) { return arr.map(function (v, i) { return (i ? 'L' : 'M') + X(s.t[i]).toFixed(1) + ' ' + Y(v).toFixed(1); }).join(''); };
+    el('path', { d: path(tr), fill: 'none', stroke: '#5A5560', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' });
+    el('path', { d: path(y), fill: 'none', stroke: '#1C1A21', 'stroke-width': 1.75, 'stroke-linejoin': 'round' });
+    var cross = el('line', { y1: T, y2: H - B, stroke: '#1C1A21', 'stroke-width': 1, opacity: 0, 'pointer-events': 'none' });
+    var dot = el('circle', { r: 4, fill: '#1C1A21', stroke: '#FFFDF9', 'stroke-width': 2, opacity: 0, 'pointer-events': 'none' });
+    el('rect', { x: L, y: T, width: W - L - R, height: H - T - B, fill: 'transparent', id: 'hit' });
+    svg.setAttribute('aria-label', 'Brightness over ' + fmt(t1, 1) + ' seconds, ranging from ' + fmt(Math.min.apply(null, y), 1) + ' to ' + fmt(Math.max.apply(null, y), 1) + ' percent of average. Use the arrow keys to read values.');
+    chartState = { s: s, y: y, tr: tr, X: X, Y: Y, W: W, cross: cross, dot: dot, i: -1 };
+
+    var table = $('table');
+    table.textContent = '';
+    var head = table.insertRow();
+    ['Time (s)', 'Brightness (% of average)', 'Moving average (%)'].forEach(function (h) {
+      var th = document.createElement('th'); th.textContent = h; head.appendChild(th);
+    });
+    for (var i = 0; i < n; i++) {
+      var row = table.insertRow();
+      [fmt(s.t[i], 3), fmt(y[i], 2), fmt(tr[i], 2)].forEach(function (c) { row.insertCell().textContent = c; });
+    }
+  }
+
+  function showPoint(i) {
+    var c = chartState;
+    if (!c) return;
+    i = Math.max(0, Math.min(c.s.t.length - 1, i));
+    c.i = i;
+    var x = c.X(c.s.t[i]);
+    c.cross.setAttribute('x1', x); c.cross.setAttribute('x2', x); c.cross.setAttribute('opacity', 0.4);
+    c.dot.setAttribute('cx', x); c.dot.setAttribute('cy', c.Y(c.y[i])); c.dot.setAttribute('opacity', 1);
+    var tip = $('tip');
+    tip.textContent = '';
+    var b = document.createElement('b'); b.textContent = fmt(c.y[i], 1) + ' %';
+    tip.appendChild(b);
+    tip.appendChild(document.createTextNode(' brightness, average ' + fmt(c.tr[i], 1) + ' %, at ' + fmt(c.s.t[i], 2) + ' s'));
+    tip.hidden = false;
+    var svg = $('chart');
+    var scale = svg.getBoundingClientRect().width / c.W;
+    var px = x * scale;
+    var half = tip.offsetWidth / 2;
+    var wrapW = $('chartWrap').clientWidth;
+    tip.style.left = Math.max(half, Math.min(wrapW - half, px)) + 'px';
+    tip.style.top = '-34px';
+  }
+  function hidePoint() {
+    var c = chartState;
+    if (!c) return;
+    c.cross.setAttribute('opacity', 0); c.dot.setAttribute('opacity', 0);
+    $('tip').hidden = true;
+  }
+  $('chart').addEventListener('pointermove', function (e) {
+    var c = chartState;
+    if (!c) return;
+    var rect = this.getBoundingClientRect();
+    var x = ((e.clientX - rect.left) / rect.width) * c.W;
+    var best = 0, bd = Infinity;
+    for (var i = 0; i < c.s.t.length; i++) {
+      var d = Math.abs(c.X(c.s.t[i]) - x);
+      if (d < bd) { bd = d; best = i; }
+    }
+    showPoint(best);
+  });
+  $('chart').addEventListener('pointerleave', hidePoint);
+  $('chart').addEventListener('blur', hidePoint);
+  $('chart').addEventListener('keydown', function (e) {
+    var c = chartState;
+    if (!c) return;
+    var step = e.shiftKey ? 10 : 1;
+    if (e.key === 'ArrowRight') showPoint((c.i < 0 ? -1 : c.i) + step);
+    else if (e.key === 'ArrowLeft') showPoint((c.i < 0 ? c.s.t.length : c.i) - step);
+    else if (e.key === 'Home') showPoint(0);
+    else if (e.key === 'End') showPoint(c.s.t.length - 1);
+    else return;
+    e.preventDefault();
+  });
+
+  // ------------------------------------------------------------- inputs
+  function aspectFromFile(file) {
+    // read the picture aspect for the region grid without blocking the measurement
+    window.__fsAspect = 16 / 9;
+    var v = document.createElement('video');
+    v.muted = true; v.preload = 'metadata';
+    v.onloadedmetadata = function () {
+      if (v.videoWidth && v.videoHeight) window.__fsAspect = v.videoWidth / v.videoHeight;
+      URL.revokeObjectURL(v.src);
+    };
+    v.src = typeof file === 'string' ? file : URL.createObjectURL(file);
+  }
+
+  $('file').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    if (f) { aspectFromFile(f); run(f, f.name); }
+    this.value = '';
+  });
+  var drop = $('drop');
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    drop.addEventListener(ev, function () { drop.classList.remove('over'); });
+  });
+  drop.addEventListener('drop', function (e) {
+    e.preventDefault();
+    var f = e.dataTransfer && e.dataTransfer.files[0];
+    if (f) { aspectFromFile(f); run(f, f.name); }
+  });
+  $('urlForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var u = $('url').value.trim();
+    if (!u) { $('url').focus(); return; }
+    window.__fsAspect = 16 / 9;
+    run(u, 'the URL');
+  });
+  $('sample').addEventListener('click', function () {
+    window.__fsAspect = 16 / 9;
+    run(new URL('sample-flicker.mp4', location.href).href, 'the sample clip (a test pattern with 10 Hz flicker)');
+  });
+
+  // bookmarklet: loads the script from jsDelivr and measures the largest video on the page
+  var bm = "javascript:(function(){function go(){var v=[].slice.call(document.querySelectorAll('video')).sort(function(a,b){var p=a.getBoundingClientRect(),q=b.getBoundingClientRect();return q.width*q.height-p.width*p.height})[0];if(!v){alert('No video found on this page.');return}FlickerScope.measure(v,{seconds:4}).then(function(r){alert('Flicker: '+r.percent+' % ('+r.label+')'+(r.hz?', rhythm '+r.hz+' Hz':'')+'\\nTo remove it on iPhone: deflickerapp.com')},function(e){alert(e.message)})}if(window.FlickerScope)return go();var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/flickerscope@1/dist/flickerscope.min.js';s.onload=go;s.onerror=function(){alert('This page does not allow outside scripts, so FlickerScope cannot run here.')};document.head.appendChild(s)})();";
+  var link = $('bookmarklet');
+  link.href = bm;
+  link.addEventListener('click', function (e) {
+    e.preventDefault();
+    setStatus('Drag the "Measure flicker" link to your bookmarks bar, then use it on a page with a video.');
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+node_modules/
+*.tgz
+.DS_Store
+Thumbs.db
+# Never commit test footage: phone clips carry GPS and other metadata.
+*.mov
+*.MOV
+*.mp4
+*.m4v
+!docs/sample-flicker.mp4

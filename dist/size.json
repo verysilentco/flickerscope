@@ -1,0 +1,14 @@
+{
+  "flickerscope.mjs": {
+    "bytes": 23032,
+    "gzip": 7830
+  },
+  "flickerscope.cjs": {
+    "bytes": 24323,
+    "gzip": 8220
+  },
+  "flickerscope.min.js": {
+    "bytes": 12624,
+    "gzip": 5991
+  }
+}

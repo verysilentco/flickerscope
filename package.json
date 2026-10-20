@@ -1,0 +1,62 @@
+{
+  "name": "flickerscope",
+  "version": "1.0.0",
+  "description": "Measure flicker in any video, in the browser: a flicker % from LED and fluorescent lights, no upload.",
+  "keywords": [
+    "flicker",
+    "video",
+    "deflicker",
+    "led",
+    "fluorescent",
+    "percent flicker",
+    "flicker index",
+    "ieee 1789",
+    "browser",
+    "canvas"
+  ],
+  "homepage": "https://deflickerapp.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/verysilentco/flickerscope.git"
+  },
+  "bugs": {
+    "url": "https://github.com/verysilentco/flickerscope/issues",
+    "email": "contact@silent.co"
+  },
+  "license": "MIT",
+  "author": "Silent Co, LLC <contact@silent.co> (https://deflickerapp.com)",
+  "type": "module",
+  "main": "./dist/flickerscope.cjs",
+  "module": "./dist/flickerscope.mjs",
+  "types": "./dist/flickerscope.d.ts",
+  "unpkg": "./dist/flickerscope.min.js",
+  "jsdelivr": "./dist/flickerscope.min.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/flickerscope.d.ts",
+        "default": "./dist/flickerscope.mjs"
+      },
+      "require": {
+        "types": "./dist/flickerscope.d.cts",
+        "default": "./dist/flickerscope.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test",
+    "validate": "node scripts/validate-real.mjs",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}
